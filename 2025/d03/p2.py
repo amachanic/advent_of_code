@@ -1,14 +1,6 @@
 import sys
 
 
-def _concat(d, s):
-    o = ''
-    for x in s:
-        o += d[x]
-
-    return o
-
-
 def find_best_n(d, num):
     s = list(range(num))
     e = 1
@@ -29,7 +21,7 @@ def find_best_n(d, num):
                     s[n] = e + n_pos
                 break
 
-        local_sum = int(_concat(d, s))
+        local_sum = int("".join(d[x] for x in s))
         if local_sum > best_sum:
             best_sum = local_sum
 
