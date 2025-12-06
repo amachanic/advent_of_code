@@ -1,6 +1,7 @@
 DECLARE @n NVARCHAR(MAX) = N'3-5
 10-14
 16-20
+16-20
 12-18
 
 1
@@ -11,30 +12,31 @@ DECLARE @n NVARCHAR(MAX) = N'3-5
 32';
 
 SELECT
-    SUM(z3.e - z3.s + 1)
+    SUM(fin.e - fin.s + 1)
 FROM
 (
     SELECT
-        MIN(z2.val) AS s,
-        MAX(z2.val) As e
+        MIN(final_groups.val) AS s,
+        MAX(final_groups.val) As e
     FROM
     (
         SELECT
-            z1.*,
-            SUM(z1.grpstart) OVER (ORDER BY z1.val) AS grp
+            group_starts.*,
+            SUM(group_starts.grpstart) OVER (ORDER BY group_starts.val) AS grp
         FROM
         (
             SELECT
-                z.*,
-                CASE WHEN LAG(z.rs, 1, 0) OVER (ORDER BY z.val) = 0 THEN 1 ELSE 0 END AS grpstart
+                row_sums.*,
+                CASE WHEN LAG(row_sums.rs, 1, 0) OVER (ORDER BY row_sums.val, row_sums.start_end DESC) = 0 THEN 1 ELSE 0 END AS grpstart
             FROM
             (
-                SELECT DISTINCT
+                SELECT
                     y.val,
-                    SUM(start_end) OVER (ORDER BY y.val) AS rs
+                    y.start_end,
+                    SUM(start_end) OVER (ORDER BY y.val, y.start_end DESC ROWS UNBOUNDED PRECEDING) AS rs
                 FROM
                 (
-                    SELECT DISTINCT
+                    SELECT
                         CONVERT(BIGINT, LEFT(s.value, CHARINDEX('-', s.value) - 1)) AS s,
                         CONVERT(BIGINT, REPLACE(RIGHT(s.value, LEN(s.value) - CHARINDEX('-', s.value)), CHAR(13), '')) AS e
                     FROM STRING_SPLIT(@n, CHAR(10)) AS s
@@ -47,9 +49,9 @@ FROM
                         (x.s, 1),
                         (x.e, -1)
                 ) AS y (val, start_end)
-            ) AS z
-        ) AS z1
-    ) AS z2
+            ) AS row_sums
+        ) AS group_starts
+    ) AS final_groups
     GROUP BY
-        z2.grp
-) AS z3;
+        final_groups.grp
+) AS fin;
