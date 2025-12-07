@@ -8,24 +8,24 @@ SELECT
 FROM
 (
     SELECT
-        CASE MIN(z3.func) WHEN '+' THEN SUM(z3.num) ELSE EXP(SUM(LOG(z3.num))) END AS final
+        CASE MIN(all_info.func) WHEN '+' THEN SUM(all_info.num) ELSE EXP(SUM(LOG(all_info.num))) END AS final
     FROM
     (
         SELECT
-            z2.full_grp,
-            CONVERT(BIGINT, TRIM(TRANSLATE(z2.nums, '+*', '  '))) AS num,
-            RIGHT(FIRST_VALUE(z2.nums) OVER (PARTITION BY z2.full_grp ORDER BY z2.pos), 1) AS func
+            full_nums.full_grp,
+            CONVERT(BIGINT, TRIM(TRANSLATE(full_nums.nums, '+*', '  '))) AS num,
+            RIGHT(FIRST_VALUE(full_nums.nums) OVER (PARTITION BY full_nums.full_grp ORDER BY full_nums.pos), 1) AS func
         FROM
         (
             SELECT
-                z1.full_grp,
-                z1.pos,
-                STRING_AGG(z1.v, '') WITHIN GROUP (ORDER BY z1.line) AS nums
+                groups.full_grp,
+                groups.pos,
+                STRING_AGG(groups.v, '') WITHIN GROUP (ORDER BY groups.line) AS nums
             FROM
             (
                 SELECT
-                    z.*,
-                    MAX(CASE WHEN r = 1 THEN grp ELSE NULL END) OVER (PARTITION BY pos) AS full_grp
+                    partial_groups.*,
+                    MAX(CASE WHEN partial_groups.r = 1 THEN partial_groups.grp ELSE NULL END) OVER (PARTITION BY partial_groups.pos) AS full_grp
                 FROM
                 (
                     SELECT
@@ -46,15 +46,15 @@ FROM
                             g.value AS pos
                         FROM GENERATE_SERIES(1, CONVERT(INT, DATALENGTH(y.value))) AS g
                     ) AS x
-                ) AS z
-            ) AS z1
+                ) AS partial_groups
+            ) AS groups
             GROUP BY
-                z1.full_grp,
-                z1.pos
-        ) AS z2
+                groups.full_grp,
+                groups.pos
+        ) AS full_nums
         WHERE
-            z2.nums <> ''
-    ) AS z3
+            full_nums.nums <> ''
+    ) AS all_info
     GROUP BY
-        z3.full_grp
+        all_info.full_grp
 ) AS x;
