@@ -89,7 +89,7 @@ BEGIN;
         s.level = @level
     GROUP BY
         s.y + 2,
-        x0.next_x
+        x0.next_x;
 
     SET @level += 1;
 END;
