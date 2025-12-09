@@ -11,6 +11,7 @@ DECLARE @n NVARCHAR(MAX) = N'3-5
 17
 32';
 
+/* Implementation #1 - split ranges, re-order, and walk forward */
 SELECT
     SUM(fin.e - fin.s + 1)
 FROM
@@ -65,3 +66,36 @@ FROM
         final_groups.grp
 ) AS fin;
 
+
+/* Implementation #2 - track maximum end seen so far */
+SELECT
+    SUM(fin.e - fin.s + 1)
+FROM
+(
+    SELECT
+        MIN(final_groups.s) AS s,
+        MAX(final_groups.e) As e
+    FROM
+    (
+        SELECT
+            starts.*,
+            SUM(starts.is_start) OVER (ORDER BY starts.s, starts.e ROWS UNBOUNDED PRECEDING) AS grp
+        FROM
+        (
+            SELECT
+                x.*,
+                CASE WHEN x.s > COALESCE(MAX(x.e) OVER (ORDER BY x.s, x.e ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) THEN 1 ELSE 0 END AS is_start
+            FROM
+            (
+                SELECT
+                    CONVERT(BIGINT, LEFT(s.value, CHARINDEX('-', s.value) - 1)) AS s,
+                    CONVERT(BIGINT, REPLACE(RIGHT(s.value, LEN(s.value) - CHARINDEX('-', s.value)), CHAR(13), '')) AS e
+                FROM STRING_SPLIT(@n, CHAR(10)) AS s
+                WHERE
+                    s.value LIKE '%-%'
+            ) AS x
+        ) AS starts
+    ) AS final_groups
+    GROUP BY
+        final_groups.grp
+) AS fin;
